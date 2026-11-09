@@ -1,4 +1,3 @@
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -8,7 +7,6 @@ import engine.core.MarioResult;
 public class MarioPpoRunner {
 
     public static void main(String[] args) throws Exception {
-
         String levelPath = args.length > 0
             ? args[0]
             : "levels/original/lvl-1.txt";
@@ -21,24 +19,25 @@ public class MarioPpoRunner {
             ? Integer.parseInt(args[2])
             : 5555;
 
-        String level = Files.readString(Path.of(levelPath));
+        boolean visuals = args.length > 3
+            ? Boolean.parseBoolean(args[3])
+            : true;
 
-        MarioPpoAgent agent =
-            new MarioPpoAgent("127.0.0.1", port);
+        String level = Files.readString(Path.of(levelPath));
+        MarioPpoAgent agent = new MarioPpoAgent("127.0.0.1", port);
 
         try {
             MarioGame game = new MarioGame();
-
             MarioResult result = game.runGame(
                 agent,
                 level,
                 timer,
                 0,
-                false
+                visuals
             );
 
+            agent.finish(result);
             PlayLevel.printResults(result);
-
         } finally {
             agent.close();
         }
