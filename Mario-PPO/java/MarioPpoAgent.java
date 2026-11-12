@@ -5,6 +5,7 @@ import engine.core.MarioAgent;
 import engine.core.MarioForwardModel;
 import engine.core.MarioResult;
 import engine.core.MarioTimer;
+import engine.core.MarioEvent;
 import engine.helper.MarioActions;
 
 public class MarioPpoAgent implements MarioAgent, AutoCloseable {
@@ -55,6 +56,10 @@ public class MarioPpoAgent implements MarioAgent, AutoCloseable {
             message.append(",").append(model.mayMarioJump());
             message.append(",").append(model.getCompletionPercentage());
             message.append(",").append(model.getRemainingTime());
+            message.append(",").append(model.getNumCollectedCoins());
+            message.append(",").append(model.getNumCollectedMushrooms());
+            message.append(",").append(model.getNumCollectedFireflower());
+            message.append(",").append(model.getNumDestroyedBricks());
 
             for (int[] row : grid) {
                 for (int value : row) {
@@ -70,12 +75,28 @@ public class MarioPpoAgent implements MarioAgent, AutoCloseable {
             }
 
             int action = Integer.parseInt(response.trim());
-            return decodeAction(action);
+            boolean[] actions = decodeAction(action);
+
+            // Advance a clone to report the immediate events caused by this action.
+            MarioForwardModel next = model.clone();
+            next.advance(actions);
+            StringBuilder eventMessage = new StringBuilder("EVT");
+            for (MarioEvent event : next.getLastFrameEvents()) {
+                eventMessage.append(",")
+                    .append(event.getEventType()).append(":")
+                    .append(event.getEventParam());
+            }
+            pendingEvents = eventMessage.toString();
+            output.println(pendingEvents);
+
+            return actions;
 
         } catch (Exception e) {
             throw new RuntimeException("Fehler bei der Agent-Kommunikation", e);
         }
     }
+
+    private String pendingEvents = "EVT";
 
     // Aktion: 0=keine, 1=rechts, 2=rechts+schnell, 3=rechts+Sprung,
     // 4=rechts+schnell+Sprung, 5=Sprung, 6=schnell+Sprung,

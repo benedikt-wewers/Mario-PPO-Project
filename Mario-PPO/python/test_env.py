@@ -1,35 +1,29 @@
+from pathlib import Path
+
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+
 from mario_env import MarioEnv
 
 
 def main():
-    env = MarioEnv(timer=20, render=True)
+    model_dir = Path(__file__).resolve().parents[1] / "models"
+
+    env = DummyVecEnv([lambda: MarioEnv(timer=20, render=True)])
+    env = VecNormalize.load(str(model_dir / "vecnormalize.pkl"), env)
+    env.training = False
+    env.norm_reward = False
+
+    model = PPO.load(str(model_dir / "mario_ppo_baseline"))
 
     try:
-        observation, info = env.reset(seed=42)
-        print("Gymnasium-Umgebung gestartet.")
-        print("Shape der Observation:", observation.shape)
-        print("Action Space:", env.action_space)
-        print("Start-Fortschritt:", info["completion"])
-
-        for step in range(2000):
-            # Zufällige Aktionen dienen nur zum Test der Schnittstelle.
-            action = env.action_space.sample()
-
-            observation, reward, terminated, truncated, info = env.step(action)
-
-            if step % 25 == 0:
-                print(
-                    f"Schritt {step:4d} | Aktion {action:2d} | "
-                    f"Reward {reward:7.3f} | "
-                    f"Fortschritt {info.get('completion', 0):.3f}"
-                )
-
-            if terminated or truncated:
-                print("Episode beendet:", info)
+        obs = env.reset()
+        while True:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, info = env.step(action)
+            if done[0]:
+                print("Spiel beendet:", info[0])
                 break
-
-        print("Test abgeschlossen.")
-
     finally:
         env.close()
 

@@ -1,5 +1,7 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import engine.core.MarioGame;
 import engine.core.MarioResult;
@@ -22,6 +24,16 @@ public class MarioPpoRunner {
         boolean visuals = args.length > 3
             ? Boolean.parseBoolean(args[3])
             : true;
+
+        String recordingRoot = System.getProperty("mario.record.root");
+        if (recordingRoot != null && visuals) {
+            Path recordingDir = Path.of(recordingRoot);
+            System.setProperty("mario.record.dir", recordingDir.toString());
+            System.setProperty("mario.record.prefix", LocalDateTime.now().format(
+                DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS")
+            ));
+            System.out.println("Aufnahme: " + recordingDir.toAbsolutePath());
+        }
 
         String level = Files.readString(Path.of(levelPath));
         MarioPpoAgent agent = new MarioPpoAgent("127.0.0.1", port);

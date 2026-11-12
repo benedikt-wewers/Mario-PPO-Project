@@ -1,9 +1,14 @@
 package engine.core;
 
 import java.awt.image.VolatileImage;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import javax.imageio.ImageIO;
 
 import javax.swing.JFrame;
 
@@ -229,6 +234,18 @@ public class MarioGame {
         this.world.mario.isFire = marioState > 1;
         this.world.update(new boolean[MarioActions.numberOfActions()]);
         long currentTime = System.currentTimeMillis();
+        String recordingPath = System.getProperty("mario.record.dir");
+        Path recordingDir = recordingPath == null || recordingPath.isBlank()
+                ? null : Path.of(recordingPath);
+        String recordingPrefix = System.getProperty("mario.record.prefix", "capture");
+        int recordingFrame = 0;
+        if (recordingDir != null) {
+            try {
+                Files.createDirectories(recordingDir);
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not create recording directory", e);
+            }
+        }
 
         //initialize graphics
         VolatileImage renderTarget = null;
@@ -268,6 +285,20 @@ public class MarioGame {
             //render world
             if (visual) {
                 this.render.renderWorld(this.world, renderTarget, backBuffer, currentBuffer);
+                if (recordingDir != null && this.world.currentTick % 2 == 0) {
+                    BufferedImage frame = new BufferedImage(
+                            MarioGame.width, 240, BufferedImage.TYPE_INT_RGB);
+                    Graphics2D frameGraphics = frame.createGraphics();
+                    frameGraphics.drawImage(renderTarget, 0, 0, null);
+                    frameGraphics.dispose();
+                    Path framePath = recordingDir.resolve(
+                            String.format("%s-frame-%06d.png", recordingPrefix, recordingFrame++));
+                    try {
+                        ImageIO.write(frame, "png", framePath.toFile());
+                    } catch (IOException e) {
+                        throw new IllegalStateException("Could not write recording frame", e);
+                    }
+                }
             }
             //check if delay needed
             if (this.getDelay(fps) > 0) {
